@@ -27,7 +27,7 @@ def whats_new(session):
     )
 
     results = [("Ссылка на статью", "Заголовок", "Редактор, Aвтор")]
-    for row in tqdm(sections_by_python, desc="Парсинг новостей"):
+    for row in tqdm(sections_by_python, desc="Парсинг новостей", colour="magenta"):
         a_link = find_tag(row, name="a")
         # Для адекватного "склеивания" URL
         href_link = a_link["href"]
@@ -60,7 +60,7 @@ def latest_versions(session):
     pattern = r"Python (?P<version>\d\.\d+) \((?P<status>.*)\)"
     results = [("Ссылка на документацию", "Версия", "Статус")]
 
-    for a_tag in tqdm(a_tags, desc="Парсинг версий"):
+    for a_tag in tqdm(a_tags, desc="Парсинг версий", colour="magenta"):
         text_link = a_tag["href"]
         text_match = re.search(pattern, a_tag.text)
         if text_match is not None:
@@ -104,8 +104,8 @@ def pep(session):
     soup = BeautifulSoup(response.text, features="lxml")
     table_tags = find_all_tag(soup, name="table", attrs={"class": "pep-zero-table"})
     temp_result = []
-    results = [["Статус", "Количество"], ["Active", 0]]
-    for row in tqdm(table_tags, desc="Парсинг списка PEP"):
+    results = [["Статус", "Количество"], ]
+    for row in tqdm(table_tags, desc="Парсинг списка PEP", colour="magenta"):
         body_tags = find_tag(row, name="tbody")
         tr_tags = find_all_tag(
             body_tags, name="tr", attrs={"class": re.compile(r"row-(even|odd)")}
@@ -121,14 +121,17 @@ def pep(session):
             )
             crop_link_pep = second_column["href"]
             full_link_pep = urljoin(pep_list_url, crop_link_pep)
+            if not EXPECTED_STATUS[preview_status]:
+                logging.warning(
+                        f"Статус {preview_status} отсутствует в базе"
+                )
             temp_result.append((EXPECTED_STATUS[preview_status], full_link_pep))
-
-    for row in tqdm(temp_result, desc="Проверка статусов PEP"):
+            
+    for row in tqdm(temp_result, desc="Проверка статусов PEP", colour="magenta"):
         response = get_response(session, row[1])
         if response is None:
             continue
         soup = BeautifulSoup(response.text, features="lxml")
-
         status_tag = find_tag(soup, string="Status")
         status = status_tag.find_next("dd").text
         if status not in row[0]:
@@ -138,7 +141,7 @@ def pep(session):
                 f"Статус в карточке: {status}\n"
                 f"Ожидаемые статусы: {row[0]}\n"
             )
-        for i in range(1, len(results)):
+        for i in range(0, len(results)):
             if status == results[i][0]:
                 results[i][1] = int(results[i][1]) + 1
                 break
